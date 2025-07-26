@@ -13,11 +13,15 @@ This document outlines 5 essential workflow design patterns for building effecti
 
 These patterns represent common architectural approaches for structuring LLM-based workflows, each optimized for different use cases and requirements:
 
+### Workflow Patterns:
 1. **Prompt Chaining** - Sequential task decomposition
 2. **Routing** - Intelligent task distribution  
 3. **Parallelization** - Concurrent processing
 4. **Orchestrator-Worker** - Dynamic task coordination
 5. **Evaluator-Optimizer** - Quality assurance and improvement
+
+### Agent Design Considerations:
+6. **Agent Frameworks vs. Custom Agents** - Understanding risks and benefits
 
 ---
 
@@ -169,6 +173,89 @@ IN → LLM Generator ⟷ LLM Evaluator → OUT
 
 ---
 
+## 6. AGENT DESIGN CONSIDERATIONS
+
+**Purpose**: Understanding the trade-offs between using agent frameworks versus building custom agent solutions.
+
+![Agent Design Risks](./images/agents-risks.png)
+
+### Risks of Agent Frameworks
+
+Agent frameworks can introduce several unpredictable elements:
+
+#### 🗺️ **Unpredictable Path**
+- Agents may take unexpected routes to solve problems
+- Difficult to trace decision-making process
+- Can lead to inefficient or suboptimal solutions
+
+#### 🔄 **Unpredictable Output**
+- Results may vary significantly between runs
+- Quality and format inconsistency
+- Difficult to ensure reproducible results
+
+#### 💰 **Unpredictable Costs**
+- Token usage can vary dramatically
+- Difficult to budget and predict expenses
+- May result in unexpectedly high API costs
+
+#### 📊 **Need for Monitoring**
+- Requires continuous observation and intervention
+- Must implement guardrails and safety measures
+- Essential to track performance and behavior
+
+#### 🚧 **Guardrails Essential**
+> *"Guardrails ensure your agents behave safely, consistently, and within your intended boundaries"*
+
+![Agent Characteristics](./images/agents.png)
+
+### Agent Characteristics
+
+By contrast, well-designed agents should be:
+
+#### 1. **Open-ended**
+- Capable of handling diverse inputs and scenarios
+- Adaptable to changing requirements
+- Can explore multiple solution paths
+
+#### 2. **Feedback loops**
+- Learn from previous interactions
+- Improve performance over time
+- Self-correcting mechanisms
+
+#### 3. **No fixed path**
+- Dynamic decision-making capabilities
+- Can adapt strategy based on context
+- Flexible problem-solving approach
+
+**Agent Architecture**:
+```
+HUMAN → LLM Call ⟷ ENVIRONMENT
+          ↓       (Action/Feedback)
+        STOP
+```
+
+### When to Use Agent Frameworks vs. Custom Solutions
+
+| Scenario | Recommended Approach | Reason |
+|----------|---------------------|---------|
+| **Predictable workflows** | Workflow Patterns (1-5) | More control, lower cost, predictable |
+| **Creative/exploratory tasks** | Agent Frameworks | Benefit from open-ended exploration |
+| **High-stakes applications** | Workflow Patterns + Custom Logic | Need maximum control and predictability |
+| **Rapid prototyping** | Agent Frameworks | Faster to implement and test |
+| **Production systems** | Hybrid (Frameworks + Guardrails) | Balance flexibility with control |
+
+### Best Practices for Agent Design
+
+1. **Start with Workflow Patterns**: Use simpler patterns first before moving to agents
+2. **Implement Guardrails**: Always include safety and boundary controls
+3. **Monitor Extensively**: Track costs, performance, and behavior
+4. **Test Thoroughly**: Agents can behave unexpectedly in edge cases
+5. **Plan for Variability**: Build systems that can handle inconsistent outputs
+6. **Cost Management**: Set limits and monitoring for API usage
+7. **Human Oversight**: Include human-in-the-loop for critical decisions
+
+---
+
 ## Pattern Selection Guide
 
 | Use Case | Primary Pattern | Secondary Pattern |
@@ -180,6 +267,8 @@ IN → LLM Generator ⟷ LLM Evaluator → OUT
 | **High-Quality Output** | Evaluator-Optimizer | Prompt Chaining |
 | **Real-time Systems** | Routing | Parallelization |
 | **Research Tasks** | Parallelization | Prompt Chaining |
+| **Exploratory/Adaptive Tasks** | Agent Frameworks | Orchestrator-Worker |
+| **Unpredictable Environments** | Agent Frameworks | Evaluator-Optimizer |
 
 ---
 
@@ -231,4 +320,4 @@ These patterns can be implemented using various frameworks:
 
 ---
 
-*This guide provides the foundation for building robust, scalable LLM applications using proven architectural patterns.*
+# LLM Agents Design Pattern
