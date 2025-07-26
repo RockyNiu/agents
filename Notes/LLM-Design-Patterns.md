@@ -29,7 +29,7 @@ These patterns represent common architectural approaches for structuring LLM-bas
 
 **Purpose**: Decompose complex tasks into fixed sub-tasks that execute sequentially.
 
-![Prompt Chaining Pattern](./images/workflow-1-prompt-chaining.png)
+<img src="./images/workflow-1-prompt-chaining.png" alt="Prompt Chaining Pattern" width="600">
 
 **Architecture**:
 ```
@@ -57,7 +57,7 @@ IN → LLM1 → Gate → LLM2 → LLM3 → OUT
 
 **Purpose**: Direct input to specialized sub-tasks, ensuring separation of concerns.
 
-![Routing Pattern](./images/workflow-2-routing.png)
+<img src="./images/workflow-2-routing.png" alt="Routing Pattern" width="600">
 
 **Architecture**:
 ```
@@ -87,7 +87,7 @@ IN → Router → LLM2 → OUT
 
 **Purpose**: Break down tasks and run multiple subtasks concurrently for speed and efficiency.
 
-![Parallelization Pattern](./images/workflow-3-parallelization.png)
+<img src="./images/workflow-3-parallelization.png" alt="Parallelization Pattern" width="600">
 
 **Architecture**:
 ```
@@ -117,7 +117,7 @@ IN → Coordinator → LLM2 → Aggregator → OUT
 
 **Purpose**: Complex tasks are broken down dynamically and combined intelligently.
 
-![Orchestrator-Worker Pattern](./images/workflow-4-orchestrator-worker.png)
+<img src="./images/workflow-4-orchestrator-worker.png" alt="Orchestrator-Worker Pattern" width="600">
 
 **Architecture**:
 ```
@@ -147,7 +147,7 @@ IN → Orchestrator → LLM2 → Synthesizer → OUT
 
 **Purpose**: LLM output is validated and improved by another LLM in a feedback loop.
 
-![Evaluator-Optimizer Pattern](./images/workflow-5-evaluator-optimizer.png)
+<img src="./images/workflow-5-evaluator-optimizer.png" alt="Evaluator-Optimizer Pattern" width="600">
 
 **Architecture**:
 ```
@@ -177,7 +177,7 @@ IN → LLM Generator ⟷ LLM Evaluator → OUT
 
 **Purpose**: Understanding the trade-offs between using agent frameworks versus building custom agent solutions.
 
-![Agent Design Risks](./images/agents-risks.png)
+<img src="./images/agents-risks.png" alt="Agent Design Risks" width="500">
 
 ### Risks of Agent Frameworks
 
@@ -206,7 +206,7 @@ Agent frameworks can introduce several unpredictable elements:
 #### 🚧 **Guardrails Essential**
 > *"Guardrails ensure your agents behave safely, consistently, and within your intended boundaries"*
 
-![Agent Characteristics](./images/agents.png)
+<img src="./images/agents.png" alt="Agent Characteristics" width="500">
 
 ### Agent Characteristics
 
@@ -317,7 +317,3 @@ These patterns can be implemented using various frameworks:
 - **AutoGen**: Strong for multi-agent systems and Evaluator-Optimizer patterns
 - **CrewAI**: Specialized for collaborative agent workflows
 - **Custom Implementation**: Maximum flexibility for any pattern
-
----
-
-# LLM Agents Design Pattern
