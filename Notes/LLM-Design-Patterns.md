@@ -1,11 +1,12 @@
 # LLM Workflow Design Patterns
 
-This document outlines 5 essential workflow design patterns for building effective Large Language Model (LLM) applications and agentic AI systems.
+This document outlines 5 essential workflow design patterns for building effective Large Language Model (LLM) applications and agentic AI systems, plus considerations for agent design patterns.
 
 ## References
 
 - **Course**: [The Complete Agentic AI Engineering Course](https://www.udemy.com/course/the-complete-agentic-ai-engineering-course/)
-- **Specific Lecture**: [5 Workflow Design Patterns](https://www.udemy.com/course/the-complete-agentic-ai-engineering-course/learn/lecture/49770901#overview)
+- **Workflow Patterns (Sections 1-5)**: [5 Workflow Design Patterns](https://www.udemy.com/course/the-complete-agentic-ai-engineering-course/learn/lecture/49770901#overview)
+- **Agent Design Patterns (Section 6)**: [Agentic Design Patterns](https://www.udemy.com/course/the-complete-agentic-ai-engineering-course/learn/lecture/49770903#overview)
 - **Instructor**: Ed Donner
 - **Date Accessed**: July 26, 2025
 
