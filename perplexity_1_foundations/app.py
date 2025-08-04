@@ -13,6 +13,7 @@ import gradio as gr
 import logging
 import sys
 from datetime import datetime
+from pydantic import BaseModel
 
 # Setup comprehensive logging
 logging.basicConfig(
@@ -43,6 +44,21 @@ logger.info(f"PUSHOVER_TOKEN: {'✅ Found' if pushover_token else '❌ Missing'}
 
 if google_key:
     logger.info(f"Google API Key starts with: {google_key[:4]}...")
+
+# Initialize main Google client
+main_client = None
+if google_key:
+    logger.info("Setting up main Google client...")
+    main_client = OpenAI(
+        api_key=google_key,
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+    )
+    logger.info("✅ Main client initialized")
+
+# Evaluation model for response quality assessment
+class Evaluation(BaseModel):
+    is_acceptable: bool
+    feedback: str
 
 def push(text: str):
     try:
@@ -119,6 +135,110 @@ tools: list[dict[str, Any]] = [{"type": "function", "function": record_user_deta
         {"type": "function", "function": record_unknown_question_json}]
 
 logger.info(f"Tools configured: {len(tools)} tools available")
+
+# Setup secondary evaluator client (using same Gemini for evaluation)
+evaluator_client = None
+if google_key:
+    logger.info("Setting up evaluator client...")
+    evaluator_client = OpenAI(
+        api_key=google_key,
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+    )
+    logger.info("✅ Evaluator client initialized")
+
+def evaluate_response(reply: str, message: str, name: str) -> Evaluation:
+    """Evaluate if a response is acceptable quality"""
+    if not evaluator_client:
+        logger.warning("No evaluator client available, skipping evaluation")
+        return Evaluation(is_acceptable=True, feedback="Evaluation skipped - no evaluator available")
+    
+    try:
+        logger.info("Starting response evaluation...")
+        
+        evaluator_prompt = f"""You are an evaluator that decides whether a response is acceptable quality.
+        
+You are evaluating a response from an AI assistant representing {name} on their professional website.
+The assistant should be professional, engaging, and represent {name} faithfully.
+
+Here's the user's message: {message}
+Here's the assistant's response: {reply}
+
+Evaluate whether this response is acceptable. Consider:
+1. Professional tone and engagement
+2. Accuracy and helpfulness  
+3. Staying in character as {name}
+4. Appropriate use of tools when needed
+
+Respond with JSON format: {{"is_acceptable": true/false, "feedback": "your detailed feedback"}}"""
+
+        response = evaluator_client.chat.completions.create(
+            model="gemini-2.0-flash",
+            messages=[{"role": "user", "content": evaluator_prompt}],
+            timeout=20
+        )
+        
+        result_text = response.choices[0].message.content or ""
+        logger.info(f"Evaluator raw response: {result_text[:200]}...")
+        
+        # Extract JSON from response
+        try:
+            # Find JSON in the response
+            json_start = result_text.find('{')
+            json_end = result_text.rfind('}') + 1
+            if json_start >= 0 and json_end > json_start:
+                json_str = result_text[json_start:json_end]
+                result_dict = json.loads(json_str)
+                evaluation = Evaluation(**result_dict)
+                logger.info(f"✅ Evaluation completed: {evaluation.is_acceptable}")
+                return evaluation
+            else:
+                logger.warning("No JSON found in evaluator response")
+                return Evaluation(is_acceptable=True, feedback="Could not parse evaluation")
+                
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse evaluator JSON: {e}")
+            return Evaluation(is_acceptable=True, feedback="JSON parsing failed")
+            
+    except Exception as e:
+        logger.error(f"Evaluation error: {e}")
+        return Evaluation(is_acceptable=True, feedback=f"Evaluation failed: {str(e)}")
+
+def rerun_with_feedback(original_reply: str, message: str, feedback: str, system_prompt: str) -> str:
+    """Generate a new response incorporating evaluation feedback"""
+    if not evaluator_client:
+        logger.warning("No evaluator client for rerun, returning original")
+        return original_reply
+    
+    try:
+        logger.info("Generating improved response with feedback...")
+        
+        improved_prompt = f"""{system_prompt}
+
+## Previous Response Rejected
+Your previous response was not acceptable. Here's what you tried to say:
+{original_reply}
+
+## Feedback for Improvement:
+{feedback}
+
+Please provide a better response that addresses the feedback while maintaining your character and professionalism."""
+
+        response = evaluator_client.chat.completions.create(
+            model="gemini-2.0-flash",
+            messages=[
+                {"role": "system", "content": improved_prompt},
+                {"role": "user", "content": message}
+            ],
+            timeout=30
+        )
+        
+        improved_response = response.choices[0].message.content or original_reply
+        logger.info(f"✅ Improved response generated ({len(improved_response)} characters)")
+        return improved_response
+        
+    except Exception as e:
+        logger.error(f"Rerun error: {e}")
+        return original_reply
 
 class Me:
 
@@ -236,64 +356,84 @@ If the user is engaging in discussion, try to steer them towards getting in touc
         logger.info(f"System prompt generated ({len(prompt)} characters)")
         return prompt
     
-    def chat(self, message: str, history: list[dict[str, str]]):
-        logger.info("="*30)
-        logger.info(f"NEW CHAT REQUEST: {message[:100]}...")
-        logger.info(f"History length: {len(history)} messages")
-        
+    def chat(self, message, history=None) -> str:
+        """Professional AI assistant chat with tool support and evaluation"""
         try:
-            # Clean up history for better compatibility
-            history = [{"role": h["role"], "content": h["content"]} for h in history]
-            logger.info("✅ History cleaned")
+            # Convert message to string regardless of format
+            message_str = str(message)
+            logger.info(f"💬 Processing message: {message_str[:100]}...")
             
-            messages = [{"role": "system", "content": self.system_prompt()}] + history + [{"role": "user", "content": message}]
-            logger.info(f"Total messages to send: {len(messages)}")
+            # Check if client is available
+            if not main_client:
+                logger.error("No Google client available")
+                return "I apologize, but the AI service is not available at the moment."
             
-            done = False
-            iteration = 0
+            # Build messages for conversation
+            messages = [
+                {"role": "system", "content": self.system_prompt()},
+                {"role": "user", "content": message_str}
+            ]
             
-            while not done:
-                iteration += 1
-                logger.info(f"API call iteration {iteration}")
+            logger.info("🤖 Sending request to Gemini...")
+            
+            # Handle tool calling loop
+            max_iterations = 3
+            final_response = ""
+            
+            for iteration in range(max_iterations):
+                logger.info(f"🔄 Tool calling iteration {iteration + 1}/{max_iterations}")
                 
-                try:
-                    logger.info("Calling Google Gemini API...")
-                    response = self.gemini.chat.completions.create(
-                        model="gemini-2.0-flash", 
-                        messages=messages, 
-                        tools=tools,
-                        timeout=30
-                    )
-                    logger.info("✅ API call successful")
+                # Make API call with tools
+                response = main_client.chat.completions.create(
+                    model="gemini-2.0-flash",
+                    messages=messages,
+                    tools=tools,
+                    timeout=30
+                )
+                
+                message_obj = response.choices[0].message
+                logger.info(f"📨 Response received")
+                
+                # Check if tool calls are needed
+                tool_calls = message_obj.tool_calls
+                if tool_calls and len(tool_calls) > 0:
+                    logger.info(f"🔧 Number of tool calls: {len(tool_calls)}")
                     
-                    finish_reason = response.choices[0].finish_reason
-                    logger.info(f"Finish reason: {finish_reason}")
-                    
-                    if finish_reason == "tool_calls":
-                        logger.info("Tool calls detected, processing...")
-                        message_obj = response.choices[0].message
-                        tool_calls = message_obj.tool_calls
-                        logger.info(f"Number of tool calls: {len(tool_calls)}")
-                        
-                        results = self.handle_tool_call(tool_calls)
-                        messages.append(message_obj)
-                        messages.extend(results)
-                        logger.info("Tool calls processed, continuing conversation...")
-                    else:
-                        done = True
-                        final_response = response.choices[0].message.content
-                        logger.info(f"✅ Final response generated ({len(final_response)} characters)")
-                        logger.info(f"Response preview: {final_response[:200]}...")
-                        
-                except Exception as api_error:
-                    logger.error(f"❌ API call failed: {api_error}")
-                    return f"I apologize, but I'm experiencing technical difficulties. Error: {str(api_error)}"
+                    results = self.handle_tool_call(tool_calls)
+                    messages.append({"role": "assistant", "content": message_obj.content or "", "tool_calls": [{"id": tc.id, "type": tc.type, "function": {"name": tc.function.name, "arguments": tc.function.arguments}} for tc in tool_calls]})
+                    messages.extend(results)
+                    continue  # Continue the loop for follow-up
+                
+                # No tool calls needed, get final response
+                final_response = message_obj.content or ""
+                if final_response:
+                    logger.info(f"✅ Final response generated ({len(final_response)} characters)")
+                    logger.info(f"Response preview: {final_response[:200]}...")
+                    break
+                else:
+                    logger.warning("Empty response received")
+                    return "I apologize, but I couldn't generate a response. Please try again."
             
-            return final_response
+            # Evaluate response quality
+            if final_response and evaluator_client:
+                logger.info("🔍 Evaluating response quality...")
+                evaluation = evaluate_response(final_response, message_str, self.name)
+                
+                if not evaluation.is_acceptable:
+                    logger.warning(f"❌ Response rejected: {evaluation.feedback}")
+                    # Generate improved response
+                    final_response = rerun_with_feedback(
+                        final_response, message_str, evaluation.feedback, self.system_prompt()
+                    )
+                    logger.info("🔄 Using improved response")
+                else:
+                    logger.info("✅ Response approved by evaluator")
             
         except Exception as e:
-            logger.error(f"❌ Chat error: {e}")
+            logger.error(f"Chat error: {str(e)}", exc_info=True)
             return f"I apologize, but I encountered an error: {str(e)}"
+        
+        return final_response or "I apologize, but I couldn't generate a response. Please try again."
     
 
 if __name__ == "__main__":
