@@ -38,10 +38,12 @@ logger.info("Checking environment variables...")
 google_key = os.getenv('GOOGLE_API_KEY')
 pushover_user = os.getenv('PUSHOVER_USER')
 pushover_token = os.getenv('PUSHOVER_TOKEN')
+openapi_token = os.getenv('OPENAI_API_KEY')
 
 logger.info(f"GOOGLE_API_KEY: {'✅ Found' if google_key else '❌ Missing'}")
 logger.info(f"PUSHOVER_USER: {'✅ Found' if pushover_user else '❌ Missing'}")
 logger.info(f"PUSHOVER_TOKEN: {'✅ Found' if pushover_token else '❌ Missing'}")
+logger.info(f"OPENAI_API_KEY: {'✅ Found' if openapi_token else '❌ Missing'}")
 
 if google_key:
     logger.info(f"Google API Key starts with: {google_key[:4]}...")
