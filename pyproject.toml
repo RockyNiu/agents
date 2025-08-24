@@ -1,10 +1,3 @@
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools.packages.find]
-include = ["common*"]
-
 [project]
 name = "agents"
 version = "0.1.0"
