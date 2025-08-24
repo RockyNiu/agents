@@ -3,5 +3,6 @@ openai>=1.0.0
 openai-agents>=0.0.15
 pypdf>=3.0.0
 python-dotenv>=1.0.0
-requests>=2.31.0
+requests>=2.31.0,
+sendgrid>=6.11.0,
 typing-extensions>=4.0.0
